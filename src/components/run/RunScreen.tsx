@@ -17,13 +17,12 @@ export function RunScreen() {
   const remainingSec = Math.max(0, totalDuration - elapsedSec);
   const progress = elapsedSec / totalDuration;
 
-  // Next announcement info
   const nextAnn = announcements.find(a => !a.fired);
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-screen px-6 py-10">
+    <div className="flex flex-col items-center px-6 py-4" style={{ height: '100svh' }}>
       {/* Header */}
-      <div className="w-full flex justify-between items-center">
+      <div className="w-full flex justify-between items-center py-2 shrink-0">
         <span className="text-white/40 text-sm font-medium uppercase tracking-widest">
           {phase === 'paused' ? 'Paused' : 'Running'}
         </span>
@@ -32,13 +31,12 @@ export function RunScreen() {
         </span>
       </div>
 
-      {/* Main ring + timer */}
-      <div className="flex flex-col items-center gap-4">
-        <ProgressRing progress={progress} size={280}>
+      {/* Main ring + timer — grows to fill available space */}
+      <div className="flex flex-col items-center justify-center flex-1 gap-3 min-h-0">
+        <ProgressRing progress={progress} size={240}>
           <TimerDisplay remainingSec={remainingSec} phase={phase} />
         </ProgressRing>
 
-        {/* Next announcement hint */}
         {nextAnn && phase === 'running' && (
           <p className="text-white/25 text-xs text-center">
             Next update in {formatTime(Math.max(0, nextAnn.triggerAtElapsedSec - elapsedSec))}
@@ -47,10 +45,14 @@ export function RunScreen() {
       </div>
 
       {/* Pace stats */}
-      <PaceStats />
+      <div className="shrink-0 py-3">
+        <PaceStats />
+      </div>
 
       {/* Controls */}
-      <ControlBar />
+      <div className="shrink-0 pb-6">
+        <ControlBar />
+      </div>
     </div>
   );
 }
