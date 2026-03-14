@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import type { RunConfig, RunPhase, RunState, ScheduledAnnouncement } from '../types/run';
-import { buildAnnouncementSchedule } from '../utils/announceSchedule';
+import { buildAnnouncementSchedule, countContentSlots } from '../utils/announceSchedule';
 import { DEFAULT_ANNOUNCEMENT_INTERVAL_SEC } from '../constants/presets';
+import { fetchContentPool } from '../services/contentFetcher';
 
 interface RunStore {
   state: RunState;
+  contentPool: (string | null)[];
   startRun: (config: RunConfig) => void;
   pause: () => void;
   resume: () => void;
@@ -29,6 +31,7 @@ const defaultState: RunState = {
 
 export const useRunStore = create<RunStore>((set, get) => ({
   state: defaultState,
+  contentPool: [],
 
   startRun: (config: RunConfig) => {
     const announcements = buildAnnouncementSchedule(
@@ -43,6 +46,15 @@ export const useRunStore = create<RunStore>((set, get) => ({
         totalDuration: config.totalDuration,
         announcements,
       },
+      contentPool: [],
+    });
+
+    // Pre-fetch content pool in background
+    const needed = countContentSlots(config.totalDuration, config.announcementIntervalSec);
+    fetchContentPool(needed).then(pool => {
+      if (get().state.phase !== 'idle') {
+        set({ contentPool: pool });
+      }
     });
   },
 
@@ -85,7 +97,7 @@ export const useRunStore = create<RunStore>((set, get) => ({
   completeRun: () =>
     set(s => ({ state: { ...s.state, phase: 'complete' } })),
 
-  reset: () => set({ state: defaultState }),
+  reset: () => set({ state: defaultState, contentPool: [] }),
 
   setPhase: (phase: RunPhase) =>
     set(s => ({ state: { ...s.state, phase } })),

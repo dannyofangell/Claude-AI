@@ -1,7 +1,7 @@
 import type { ScheduledAnnouncement } from '../types/run';
 
 const DEDUP_WINDOW_SEC = 60;
-const MOTIVATIONAL_MIN_GAP_SEC = 90;
+const CONTENT_INTERVAL_SEC = 2 * 60; // poem/fact every 2 minutes
 
 export function buildAnnouncementSchedule(
   totalDuration: number,
@@ -19,7 +19,6 @@ export function buildAnnouncementSchedule(
   const threeQuarters = Math.floor(totalDuration * 0.75);
   announces.push({ triggerAtElapsedSec: threeQuarters, type: 'three_quarters', messageKey: 'three_quarters', fired: false });
 
-  // Last-5-min warning (only if run is > 10 min)
   if (totalDuration > 10 * 60) {
     const lastWarning = totalDuration - 5 * 60;
     announces.push({ triggerAtElapsedSec: lastWarning, type: 'last_warning', messageKey: 'last_warning', fired: false });
@@ -27,7 +26,7 @@ export function buildAnnouncementSchedule(
 
   announces.push({ triggerAtElapsedSec: totalDuration, type: 'completion', messageKey: 'completion', fired: false });
 
-  // Interval announces
+  // Time interval announces (every 5 min)
   for (let t = intervalSec; t < totalDuration - intervalSec / 2; t += intervalSec) {
     const nearMilestone = announces.some(a =>
       a.type !== 'interval' && Math.abs(a.triggerAtElapsedSec - t) < DEDUP_WINDOW_SEC
@@ -37,38 +36,48 @@ export function buildAnnouncementSchedule(
     }
   }
 
-  // Motivational messages (pseudo-random, 2-4 messages)
-  const count = totalDuration > 20 * 60 ? 4 : totalDuration > 10 * 60 ? 3 : 2;
-  const motSlots: number[] = [];
-  const seed = totalDuration; // deterministic per run duration
-
-  for (let i = 0; i < count * 5 && motSlots.length < count; i++) {
-    // pseudo-random position between 2min and totalDuration-2min
-    const range = totalDuration - 4 * 60;
-    const candidate = 2 * 60 + Math.abs((seed * (i + 7) * 2654435761) % range);
-
-    const tooClose = [...announces, ...motSlots.map(t => ({ triggerAtElapsedSec: t }))].some(
-      a => Math.abs(a.triggerAtElapsedSec - candidate) < MOTIVATIONAL_MIN_GAP_SEC
+  // Content announcements (poem/fact) every 2 minutes
+  // Start at 2 min, skip last 2 min, skip if near another announcement
+  let contentIdx = 0;
+  for (let t = CONTENT_INTERVAL_SEC; t < totalDuration - CONTENT_INTERVAL_SEC; t += CONTENT_INTERVAL_SEC) {
+    const nearOther = announces.some(a =>
+      Math.abs(a.triggerAtElapsedSec - t) < DEDUP_WINDOW_SEC
     );
-
-    if (!tooClose) motSlots.push(candidate);
+    if (!nearOther) {
+      announces.push({
+        triggerAtElapsedSec: t,
+        type: 'motivational',
+        messageKey: `content_${contentIdx}`,
+        fired: false,
+      });
+      contentIdx++;
+    }
   }
 
-  motSlots.forEach((t, idx) => {
-    announces.push({
-      triggerAtElapsedSec: Math.floor(t),
-      type: 'motivational',
-      messageKey: `motivational_${idx}`,
-      fired: false,
-    });
-  });
-
-  // Sort by trigger time
   announces.sort((a, b) => a.triggerAtElapsedSec - b.triggerAtElapsedSec);
 
-  // Pre-mark already-fired (for addTime re-schedule)
   return announces.map(a => ({
     ...a,
     fired: a.triggerAtElapsedSec < minElapsed,
   }));
+}
+
+// Count how many content slots will be needed for a given duration
+export function countContentSlots(totalDuration: number, intervalSec: number): number {
+  const tempAnnounces: { triggerAtElapsedSec: number }[] = [
+    { triggerAtElapsedSec: 0 },
+    { triggerAtElapsedSec: Math.floor(totalDuration / 2) },
+    { triggerAtElapsedSec: Math.floor(totalDuration * 0.75) },
+    { triggerAtElapsedSec: totalDuration - 5 * 60 },
+    { triggerAtElapsedSec: totalDuration },
+  ];
+  for (let t = intervalSec; t < totalDuration - intervalSec / 2; t += intervalSec) {
+    tempAnnounces.push({ triggerAtElapsedSec: t });
+  }
+  let count = 0;
+  for (let t = CONTENT_INTERVAL_SEC; t < totalDuration - CONTENT_INTERVAL_SEC; t += CONTENT_INTERVAL_SEC) {
+    const nearOther = tempAnnounces.some(a => Math.abs(a.triggerAtElapsedSec - t) < DEDUP_WINDOW_SEC);
+    if (!nearOther) count++;
+  }
+  return Math.max(count, 1);
 }

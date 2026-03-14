@@ -7,13 +7,13 @@ import { DEFAULT_ANNOUNCEMENT_INTERVAL_SEC } from '../../constants/presets';
 import { formatTime } from '../../utils/formatTime';
 
 export function SetupScreen() {
-  const [duration, setDuration] = useState(20 * 60); // default 20 min
+  const [duration, setDuration] = useState(20 * 60);
   const [paceSecPerKm, setPaceSecPerKm] = useState<number | undefined>(undefined);
   const startRun = useRunStore(s => s.startRun);
   const { unlockAudio, isSupported } = useSpeech();
 
   const handleStart = () => {
-    unlockAudio(); // iOS Safari TTS unlock
+    unlockAudio();
     startRun({
       totalDuration: duration,
       paceSecondsPerKm: paceSecPerKm,
@@ -22,42 +22,67 @@ export function SetupScreen() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-6 py-12">
-      <div className="w-full max-w-sm space-y-8">
+    <div
+      className="flex flex-col items-center justify-center min-h-screen px-6 py-12"
+      style={{ background: '#000' }}
+    >
+      <div className="w-full max-w-sm space-y-10">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="text-5xl mb-3">🏃</div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">Hoka Run</h1>
-          <p className="text-white/50 text-sm">Your free running companion</p>
-        </div>
-
-        {/* Duration picker */}
-        <div className="space-y-3">
-          <h2 className="text-white font-semibold text-base">How long?</h2>
-          <DurationPicker value={duration} onChange={setDuration} />
-          <p className="text-center text-white/40 text-sm">
-            Selected: <span className="text-orange-400 font-semibold">{formatTime(duration)}</span>
+        <div className="text-center">
+          <div className="text-5xl mb-4">🏃</div>
+          <h1
+            style={{
+              fontSize: '2.5rem',
+              fontWeight: 900,
+              color: '#fff',
+              letterSpacing: '-0.03em',
+              margin: 0,
+            }}
+          >
+            Hoka Run
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', marginTop: '0.4rem' }}>
+            poems &amp; facts while you run
           </p>
         </div>
 
-        {/* Pace input */}
-        <div>
-          <PaceInput value={paceSecPerKm} onChange={setPaceSecPerKm} />
+        {/* Duration */}
+        <div className="space-y-3">
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            How long?
+          </p>
+          <DurationPicker value={duration} onChange={setDuration} />
+          <p className="text-center" style={{ color: '#f97316', fontWeight: 700, fontSize: '1.1rem' }}>
+            {formatTime(duration)}
+          </p>
         </div>
 
-        {/* TTS warning */}
+        {/* Pace */}
+        <PaceInput value={paceSecPerKm} onChange={setPaceSecPerKm} />
+
         {!isSupported && (
-          <p className="text-yellow-400 text-xs text-center">
-            Voice announcements not supported in this browser.
+          <p style={{ color: '#fbbf24', fontSize: '0.75rem', textAlign: 'center' }}>
+            Voice not supported in this browser.
           </p>
         )}
 
-        {/* Start button */}
+        {/* Start */}
         <button
           onClick={handleStart}
-          className="w-full py-5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white text-xl font-bold rounded-2xl transition-all shadow-xl shadow-orange-500/30 active:scale-95"
+          style={{
+            width: '100%',
+            padding: '1.2rem',
+            background: '#f97316',
+            color: '#fff',
+            fontSize: '1.2rem',
+            fontWeight: 900,
+            border: 'none',
+            borderRadius: '1rem',
+            cursor: 'pointer',
+            letterSpacing: '-0.01em',
+          }}
         >
-          Start Run
+          Start Run →
         </button>
       </div>
     </div>
